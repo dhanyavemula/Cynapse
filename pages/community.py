@@ -112,7 +112,6 @@ with comm_tab_view:
             link_text = f"<br>🔗 Link: <code style='font-size:0.78rem;'>{link_val}</code>" if link_val else ""
             author_tag = f"<br><i style='color:gray; font-size:0.8rem;'>Reported by: {row['author']}</i>"
 
-            # FIXED SECTION: Corrected HTML tag nesting
             st.markdown(f"""
             <div style='border: 1px solid {border_color}; padding: 15px; border-radius: 10px; margin-bottom: 10px; background-color: rgba(30, 58, 95, 0.05);'>
                 <div style='display:flex;justify-content:space-between;align-items:center;'>
@@ -137,6 +136,7 @@ with comm_tab_report:
     if not st.session_state.logged_in:
         st.warning("🔐 **Login required to submit reports.** Please login using the sidebar.")
     else:
+        # Note: We assume st.session_state.username is set in your cyber.py login logic
         current_user = st.session_state.get("username", "Anonymous User")
         st.success(f"✅ Logged in as **{current_user}**")
 
