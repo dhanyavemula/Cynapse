@@ -108,9 +108,9 @@ with comm_tab_view:
             )
 
             # Display formatting
-            amount_text = f"<br>💰 Amount Lost: <b>₹{row['amount']:,.0f}</b>" if row["amount"] else ""
-            link_text = f"<br>🔗 Link: <code style='font-size:0.78rem;'>{link_val}</code>" if link_val else ""
-            author_tag = f"<br><i style='color:gray; font-size:0.8rem;'>Reported by: {row['author']}</i>"
+            #amount_text = f"<br>💰 Amount Lost: <b>₹{row['amount']:,.0f}</b>" if row["amount"] else ""
+            #link_text = f"<br>🔗 Link: <code style='font-size:0.78rem;'>{link_val}</code>" if link_val else ""
+            #author_tag = f"<br><i style='color:gray; font-size:0.8rem;'>Reported by: {row['author']}</i>"
 
             st.markdown(f"""
             <div style='border: 1px solid {border_color}; padding: 15px; border-radius: 10px; margin-bottom: 10px; background-color: rgba(30, 58, 95, 0.05);'>
@@ -166,4 +166,3 @@ with comm_tab_report:
                     description=description.strip()
                 )
                 st.success("✅ Report submitted! Refresh the 'View Reports' tab to see it.")
-                st.balloons()
