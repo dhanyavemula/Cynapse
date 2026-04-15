@@ -108,8 +108,8 @@ with comm_tab_view:
             )
 
             # Display formatting
-            #amount_text = f"<br>💰 Amount Lost: <b>₹{row['amount']:,.0f}</b>" if row["amount"] else ""
-            #link_text = f"<br>🔗 Link: <code style='font-size:0.78rem;'>{link_val}</code>" if link_val else ""
+            amount_text = f"<br>💰 Amount Lost: <b>₹{row['amount']:,.0f}</b>" if row["amount"] else ""
+            link_text = f"<br>🔗 Link: <code style='font-size:0.78rem;'>{link_val}</code>" if link_val else ""
             #author_tag = f"<br><i style='color:gray; font-size:0.8rem;'>Reported by: {row['author']}</i>"
 
             st.markdown(f"""
