@@ -4,6 +4,7 @@ import io
 from PIL import Image
 import numpy as np
 from PIL import Image
+import pytesseract
 
 # Optional imports - checking if they are available
 try:
