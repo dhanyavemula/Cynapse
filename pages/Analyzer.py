@@ -172,7 +172,11 @@ with tab_link:
 # ── TAB 2: IMAGE ANALYZER ─────────────────────────────────────────
 import pytesseract # Needs 'pip install pytesseract'
 #C:\Program Files\Tesseract-OCR
-pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+#pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+# ✅ Works on both local Windows AND Streamlit Cloud
+import os
+if os.name == 'nt':  # Only set path on Windows
+    pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
 # ── TAB 2: IMAGE ANALYZER (AUTOMATED) ─────────────────────────────
 with tab_image:
