@@ -218,8 +218,9 @@ with tab_image:
                     st.text(extracted_text if extracted_text.strip() else "No readable text found.")
 
             except Exception as e:
-                st.error("OCR Engine not found on this laptop.")
-                st.info("To make this work locally, install Tesseract OCR. On the web (Streamlit Cloud), this works automatically if added to packages.txt.")
+                st.error(f"Error: {e}")
+                #st.error("OCR Engine not found on this laptop.")
+                #st.info("To make this work locally, install Tesseract OCR. On the web (Streamlit Cloud), this works automatically if added to packages.txt.")
 
 # ── TAB 3: QR CODE ANALYZER ───────────────────────────────────────
 with tab_qr:
