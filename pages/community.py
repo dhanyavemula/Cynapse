@@ -31,7 +31,6 @@ def fetch_reports(limit=50):
     return [dict(row) for row in cursor.fetchall()]
 
 def get_repeated_links():
-    # Finds links reported more than once
     cursor = db.execute('''
         SELECT link, COUNT(link) as count 
         FROM reports 
@@ -47,6 +46,38 @@ def insert_report(author, scam_type, money_lost, amount, link, description):
         VALUES (?, ?, ?, ?, ?, ?)
     ''', (author, scam_type, money_lost, amount, link, description))
     db.commit()
+
+# --- LINK RISK ANALYZER (same logic as analyser.py) ---
+def analyze_url(url):
+    """Calculates a risk score for a given URL. Returns dict with score, level, color, reasons."""
+    score = 0
+    reasons = []
+
+    if not url.lower().startswith("https"):
+        score += 40
+        reasons.append("❌ Connection is not secure (Missing HTTPS)")
+    else:
+        reasons.append("✅ Secure connection (HTTPS)")
+
+    suspicious_words = ["login", "verify", "bank", "update", "free", "gift", "account", "secure", "otp"]
+    found_words = [word for word in suspicious_words if word in url.lower()]
+    if found_words:
+        score += len(found_words) * 15
+        reasons.append(f"⚠️ Contains suspicious keywords: {', '.join(found_words)}")
+
+    suspicious_tlds = [".xyz", ".top", ".zip", ".buzz", ".work", ".tk", ".ml"]
+    if any(url.lower().endswith(tld) for tld in suspicious_tlds):
+        score += 30
+        reasons.append("⚠️ Uses a high-risk domain extension (TLD)")
+
+    if score >= 60:
+        level, color = "High Risk", "red"
+    elif score >= 30:
+        level, color = "Moderate Risk", "orange"
+    else:
+        level, color = "Safe / Low Risk", "green"
+
+    return {"score": min(score, 100), "level": level, "color": color, "reasons": reasons}
 
 # --- PAGE CONTENT ---
 
@@ -70,7 +101,6 @@ with comm_tab_view:
     if not reports:
         st.info("No reports yet. Be the first to submit one!")
     else:
-        # Summary metrics
         mc1, mc2, mc3 = st.columns(3)
         with mc1:
             st.metric("Total Reports", len(reports))
@@ -83,7 +113,6 @@ with comm_tab_view:
 
         st.markdown("---")
 
-        # Type filter
         all_types = ["All"] + sorted(list({r["scam_type"] for r in reports}))
         filter_type = st.selectbox("Filter by Scam Type", all_types, key="type_filter")
 
@@ -94,18 +123,14 @@ with comm_tab_view:
             link_val = row["link"] or ""
             is_repeated = link_val and link_val in repeated
             border_color = "#ff1744" if is_repeated else "#1e3a5f"
-            
-            # Badge logic
-            badge = (f'<span style="background:#ff1744;color:#fff;padding:2px 8px;border-radius:4px;font-size:0.7rem;margin-left:6px;">🔴 FLAGGED ×{repeated[link_val]}</span>') if is_repeated else ""
 
+            badge = (f'<span style="background:#ff1744;color:#fff;padding:2px 8px;border-radius:4px;font-size:0.7rem;margin-left:6px;">🔴 FLAGGED ×{repeated[link_val]}</span>') if is_repeated else ""
             money_badge = ('<span style="background:#ff6b35;color:#fff;padding:2px 8px;border-radius:4px;font-size:0.7rem;margin-left:4px;">💸 Lost Money</span>') if row["money_lost"] == "Yes" else ""
 
-            # Display formatting
             amount_text = f"<br><br>💰 Amount Lost: <b>₹{row['amount']:,.0f}</b>" if row["amount"] else ""
             link_text = f"<br>🔗 Link: <code style='font-size:0.78rem;'>{link_val}</code>" if link_val else ""
             author_tag = f"<br><span style='color:gray;font-size:0.8rem;'>Reported by: {row['author']}</span>"
 
-            # Single line HTML rendering
             html_content = f"<div style='border:1px solid {border_color};padding:15px;border-radius:10px;margin-bottom:10px;background-color:rgba(30,58,95,0.05);'><div style='display:flex;justify-content:space-between;align-items:center;'><span style='font-weight:700;font-size:1rem;'>{row['scam_type']} Scam {badge} {money_badge}</span><span style='color:gray;font-size:0.8rem;'>{row['timestamp']}</span></div><div style='margin-top:10px;'>{row['description'] or '<i>No description provided.</i>'}{amount_text}{link_text}{author_tag}</div></div>"
             
             st.markdown(html_content, unsafe_allow_html=True)
@@ -117,7 +142,6 @@ with comm_tab_report:
     if not st.session_state.logged_in:
         st.warning("🔐 **Login required to submit reports.** Please login using the sidebar.")
     else:
-        # Note: We assume st.session_state.username is set in your cyber.py login logic
         current_user = st.session_state.get("username", "Anonymous User")
         st.success(f"✅ Logged in as **{current_user}**")
 
@@ -137,13 +161,33 @@ with comm_tab_report:
             if not description.strip():
                 st.error("Please provide a description.")
             else:
-                final_amount = float(amount) if money_lost == "Yes" and amount > 0 else None
-                insert_report(
-                    author=current_user,
-                    scam_type=scam_type,
-                    money_lost=money_lost,
-                    amount=final_amount,
-                    link=link.strip(),
-                    description=description.strip()
-                )
-                st.success("✅ Report submitted! Refresh the 'View Reports' tab to see it.")
+                # ── Link validation before publishing ──────────────────────
+                link_clean = link.strip()
+                link_blocked = False
+
+                if link_clean:
+                    link_result = analyze_url(link_clean)
+                    if link_result["level"] == "Safe / Low Risk":
+                        link_blocked = True
+                        st.error(
+                            f"🚫 **Report not submitted.** "
+                            f"The link `{link_clean}` was analyzed and rated **{link_result['level']}** "
+                            f"(Score: {link_result['score']}/100). "
+                            f"Only links rated as Moderate Risk or High Risk can be included in a scam report. "
+                            f"Please verify you have entered the correct suspicious link."
+                        )
+                        st.markdown("**Analysis details:**")
+                        for r in link_result["reasons"]:
+                            st.write(r)
+
+                if not link_blocked:
+                    final_amount = float(amount) if money_lost == "Yes" and amount > 0 else None
+                    insert_report(
+                        author=current_user,
+                        scam_type=scam_type,
+                        money_lost=money_lost,
+                        amount=final_amount,
+                        link=link_clean,
+                        description=description.strip()
+                    )
+                    st.success("✅ Report submitted! Refresh the 'View Reports' tab to see it.")
