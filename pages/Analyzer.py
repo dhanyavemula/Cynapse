@@ -4,7 +4,6 @@ import io
 from PIL import Image
 import numpy as np
 from PIL import Image
-import pytesseract
 
 # Optional imports - checking if they are available
 try:
@@ -79,42 +78,6 @@ def render_risk_result(result, content):
     for r in result['reasons']:
         st.write(r)
 
-    # ── SSL / Security Info Panel ──────────────────────────────────
-    is_https = content.lower().startswith("https")
-    ssl_status = "✅ Valid (AES-256 Encryption)" if is_https else "❌ Not Detected (HTTP only)"
-    ssl_color  = "#1b4332" if is_https else "#7f1d1d"
-    ssl_icon   = "🔒" if is_https else "🔓"
-
-    st.markdown(f"""
-    <div style="
-        background: {ssl_color};
-        border: 1px solid {'#2d6a4f' if is_https else '#991b1b'};
-        border-radius: 10px;
-        padding: 14px 18px;
-        margin-top: 10px;
-    ">
-        <table style="width:100%; border-collapse:collapse; font-size:0.88rem; color:#e5e7eb;">
-            <tr>
-                <td style="padding:5px 0; width:40%;"><b>{ssl_icon} SSL / TLS Status</b></td>
-                <td style="padding:5px 0;">{ssl_status}</td>
-            </tr>
-            <tr>
-                <td style="padding:5px 0;"><b>🔐 Protocol</b></td>
-                <td style="padding:5px 0;">{"HTTPS (Encrypted)" if is_https else "HTTP (Unencrypted)"}</td>
-            </tr>
-            <tr>
-                <td style="padding:5px 0;"><b>🛡️ Data Protection</b></td>
-                <td style="padding:5px 0;">{"Transport layer secured" if is_https else "Data transmitted in plaintext"}</td>
-            </tr>
-            <tr>
-                <td style="padding:5px 0;"><b>🔎 Scan Engine</b></td>
-                <td style="padding:5px 0;">CyberShield Heuristic v1.0</td>
-            </tr>
-        </table>
-    </div>
-    """, unsafe_allow_html=True)
-
-
 # ─────────────────────────────────────────────────────────────────
 # 🚀 MAIN UI CODE
 # ─────────────────────────────────────────────────────────────────
@@ -188,13 +151,17 @@ with tab_image:
 
         with st.spinner("🔍 Running OCR Analysis..."):
             try:
+                # 1. Extract text from the image
+                # (Note: Locally you may need: pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe')
                 extracted_text = pytesseract.image_to_string(img).lower()
                 
+                # 2. Define "Danger" Keywords
                 danger_keywords = [
                     "otp", "password", "blocked", "urgent", "verify", "winner", "prize", 
                     "bank", "login", "win", "lakh", "withdraw", "bonus", "rewards", 
                     "grab now", "download now", "get ₹", "free"
                 ]
+                # danger_keywords = ["otp", "password", "blocked", "urgent", "verify", "winner", "prize", "bank", "login"]
                 found_risks = [word for word in danger_keywords if word in extracted_text]
 
                 st.markdown("---")
@@ -205,6 +172,7 @@ with tab_image:
                     st.write(f"The following suspicious terms were found inside the image: **{', '.join(found_risks)}**")
                     st.warning("This image likely belongs to a phishing scam. Do not share any details requested in this message.")
                 else:
+                    # Check for URLs in the text as a secondary measure
                     url_pattern = re.compile(r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+")
                     links = url_pattern.findall(extracted_text)
                     
@@ -215,18 +183,24 @@ with tab_image:
                         st.success("✅ **Clean Scan**")
                         st.write("No known phishing keywords were detected in this image.")
 
+                # Show the user what the computer "saw"
                 with st.expander("See Extracted Text"):
                     st.text(extracted_text if extracted_text.strip() else "No readable text found.")
 
             except Exception as e:
                 st.error("OCR Engine not found on this laptop.")
                 st.info("To make this work locally, install Tesseract OCR. On the web (Streamlit Cloud), this works automatically if added to packages.txt.")
-
 # ── TAB 3: QR CODE ANALYZER ───────────────────────────────────────
+# import streamlit as st
+# import cv2
+# import numpy as np
+# from PIL import Image
+
 with tab_qr:
     st.markdown("### 📷 Intelligent QR Code Scanner")
     st.caption("Scan UPI codes, websites, or contact info to verify safety.")
 
+    # 1. File Uploader
     qr_file = st.file_uploader(
         "Upload QR Code Image",
         type=["png", "jpg", "jpeg"],
@@ -234,12 +208,15 @@ with tab_qr:
     )
 
     if qr_file:
+        # 2. Read bytes FIRST, before anything else consumes the stream
         file_bytes = np.asarray(bytearray(qr_file.read()), dtype=np.uint8)
         opencv_img = cv2.imdecode(file_bytes, 1)
 
+        # 3. Display image using the already-read bytes (no second .read() needed)
         img = Image.open(io.BytesIO(file_bytes))
         st.image(img, caption="Scanning QR Content...", width=300)
 
+        # 4. Detect and Decode
         detector = cv2.QRCodeDetector()
         decoded_info, points, _ = detector.detectAndDecode(opencv_img)
 
@@ -247,6 +224,7 @@ with tab_qr:
             st.markdown("---")
             st.subheader("📊 Analysis Result")
 
+            # --- CATEGORY 1: UPI / LOCAL SHOP PAYMENTS ---
             if "upi://pay" in decoded_info.lower():
                 st.info("💳 **Result: Personal/Merchant QR**")
                 st.write("This is a standard UPI payment link used in shops.")
@@ -257,6 +235,7 @@ with tab_qr:
                     st.write("**Target:** UPI Recipient")
                 st.warning("⚠️ **Safety Check:** Ensure the shop name on your screen matches the shop you are in.")
 
+            # --- CATEGORY 2: WEBSITES (PHISHING CHECK) ---
             elif "http" in decoded_info.lower():
                 scam_keywords = ["lottery", "winner", "prize", "free-gift", "update-bank", "kyc", "vkyc", "lakh"]
                 is_risky = any(word in decoded_info.lower() for word in scam_keywords)
@@ -270,6 +249,7 @@ with tab_qr:
                     st.write(f"**Target Link:** {decoded_info}")
                     st.info("This appears to be a standard web address.")
 
+            # --- CATEGORY 3: EVERYTHING ELSE (Text/Contacts) ---
             else:
                 st.info("📄 **Result: Plain Information**")
                 st.write(f"**Content found:** `{decoded_info}`")
