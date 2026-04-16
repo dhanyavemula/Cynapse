@@ -171,15 +171,9 @@ with tab_link:
                 render_risk_result(result, ex_url)
 
 # ── TAB 2: IMAGE ANALYZER ─────────────────────────────────────────
-#import pytesseract # Needs 'pip install pytesseract'
+import pytesseract # Needs 'pip install pytesseract'
 #C:\Program Files\Tesseract-OCR
-#pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
-import pytesseract
-import platform
-
-if platform.system() == "Windows":
-    pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
-# On Linux (Streamlit Cloud), tesseract is auto-found from packages.txt — no path needed
+pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
 # ── TAB 2: IMAGE ANALYZER (AUTOMATED) ─────────────────────────────
 with tab_image:
