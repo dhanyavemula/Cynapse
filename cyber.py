@@ -19,11 +19,13 @@ except ImportError:
 # PAGE CONFIG
 # ──────────────────────────────────────────────
 st.set_page_config(
-    page_title="Smart Cyber Risk Analyzer",
+    page_title="CYNAPSE",
     page_icon="🛡️",
     layout="wide",
     initial_sidebar_state="expanded",
 )
+st.title("CYNAPSE")
+st.caption("Smart Cyber Risk Analyzer")
 
 # ──────────────────────────────────────────────
 # GLOBAL STYLES
@@ -104,7 +106,10 @@ USERS = {
     "demo":  "demo123",
     "sriyaparijatha103@gmail.com": "sriya2",
     "vaishnavicherkuri@gmail.com":"chvaishu94",
-    "arjunvallabh@yahoo.com":"arjun23"
+    "arjunvallabh@yahoo.com":"arjun23",
+    "sowmyag2006@gmail.com":"sowmya26",
+    "prasannalakshmi@gmail.com":"lakshmi.06",
+    "sureshvarma@gmail.com":"surma01"
 }
 
 # ══════════════════════════════════════════════
